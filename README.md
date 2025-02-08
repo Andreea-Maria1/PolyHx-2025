@@ -1,6 +1,6 @@
 # PolyHx-2025
 
-- GEOSHEILD -
+## GEOSHEILD 
 
 Notre projet vise à développer un système de surveillance des glissements de terrain combiné à une cartographie des zones protégées pour empêcher la construction dans les secteurs à risque. Les objectifs spécifiques incluent :
 
