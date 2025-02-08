@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geoshield/components/navbar.dart';
+import 'package:geoshield/map_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -31,21 +32,11 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              'Hello world!',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: const MapScreen(),
+      bottomNavigationBar: Navbar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
       ),
-      bottomNavigationBar: Navbar(),
     );
   }
 }

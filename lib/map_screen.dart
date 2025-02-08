@@ -7,19 +7,16 @@ class MapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Constructibilité des terrains")),
-      body: FlutterMap(
-        options: MapOptions(
-          initialCenter: const LatLng(45.4215, -75.6993), // Coordonnées d'Ottawa
-          initialZoom: 5.5,
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", // Corrigé pour éviter l'erreur de sous-domaines
-          ),
-        ],
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: const LatLng(45.5017, -73.5673), // Montréal
+        initialZoom: 10,
       ),
+      children: [
+        TileLayer(
+          urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        ),
+      ],
     );
   }
 }
