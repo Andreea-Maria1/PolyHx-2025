@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:geoshield/components/navbar.dart';
 import 'package:geoshield/components/map_screen.dart';
+import 'package:geoshield/components/navbar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -12,7 +12,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
+  int _navIndex = 0;
+  final Set<String> _selectedLayers = {};
+
+  void _toggleLayer(String layer) {
+    setState(() {
+      _selectedLayers.contains(layer) ? _selectedLayers.remove(layer) : _selectedLayers.add(layer);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +39,13 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: const MapScreen(),
+      body: MapScreen(
+        selectedLayers: _selectedLayers,
+        onLayerToggled: _toggleLayer,
+      ),
       bottomNavigationBar: Navbar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        selectedIndex: _navIndex,
+        onDestinationSelected: (index) => setState(() => _navIndex = index),
       ),
     );
   }
