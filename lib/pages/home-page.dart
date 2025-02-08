@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geoshield/components/navbar.dart';
-import 'package:geoshield/map_screen.dart';
+import 'package:geoshield/components/map_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
