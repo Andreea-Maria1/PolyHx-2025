@@ -15,7 +15,6 @@ Elle vise à **prévenir les constructions en zones dangereuses** et à **sensib
 - [🗺️ Fonctionnalités principales](#fonctionnalités-principales)
 - [🛠️ Technologies utilisées](#technologies-utilisées)
 - [📥 Installation](#installation)
-- [👨‍💻 Équipe de développement](#équipe-de-développement)
 
 ---
 
@@ -49,7 +48,6 @@ GeoShield repose sur une stack **moderne et performante** :
 | **flutter_map** | Affichage des cartes interactives |
 | **OpenStreetMap** | Base cartographique |
 | **GeoJSON & ESRI REST API** | Intégration des données de risques |
-| **Firebase** (optionnel) | Stockage et gestion des utilisateurs |
 
 ---
 
