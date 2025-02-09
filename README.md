@@ -1,9 +1,73 @@
-# PolyHx-2025
+# 🌍 GeoShield - PolyHx-2025
 
-## GEOSHEILD 
+GeoShield est une plateforme de **visualisation des risques environnementaux**, combinant **glissements de terrain, risques d'inondation et cartographie des zones protégées**.  
+Elle vise à **prévenir les constructions en zones dangereuses** et à **sensibiliser citoyens et promoteurs immobiliers aux risques naturels**.
 
-Notre projet vise à développer un système de surveillance des glissements de terrain combiné à une cartographie des zones protégées pour empêcher la construction dans les secteurs à risque. Les objectifs spécifiques incluent :
+<p align="center">
+  <img src="assets/geoshield.png" alt="GeoShield Logo" width="300">
+</p>
 
-- Identification des zones à risque : Analyse des facteurs géologiques, hydrologiques et climatiques influençant les glissements de terrain.
-- Cartographie et alerte : Création de cartes interactives indiquant les zones dangereuses et les restrictions de construction.
-- Sensibilisation du public : Informer les citoyens et les promoteurs immobiliers sur les dangers et les réglementations en vigueur.
+
+---
+
+## **📌 Sommaire**
+- [🔍 Objectifs](#objectifs)
+- [🗺️ Fonctionnalités principales](#fonctionnalités-principales)
+- [🛠️ Technologies utilisées](#technologies-utilisées)
+- [📥 Installation](#installation)
+- [👨‍💻 Équipe de développement](#équipe-de-développement)
+
+---
+
+## 🔍 Objectifs
+GeoShield a pour mission de :
+- **Identifier les zones à risque** 📍  
+  - Analyse des facteurs **géologiques, hydrologiques et climatiques** influençant les glissements de terrain et inondations.
+- **Cartographier et alerter** 🌎  
+  - Création de **cartes interactives** indiquant les **zones dangereuses et restrictions de construction**.
+- **Sensibiliser le public et les professionnels** ⚠️  
+  - Informer les **citoyens, urbanistes et promoteurs immobiliers** sur les **réglementations** et les **mesures de prévention**.
+
+---
+
+## 🗺️ Fonctionnalités principales
+✅ **Affichage des zones à risque** sur une carte interactive (**glissements de terrain, inondations, zones protégées**).  
+✅ **Système de couches dynamiques** pour activer/désactiver différents types de risques.  
+✅ **Recherche intelligente** pour localiser rapidement une zone spécifique.  
+✅ **Mise à jour des données en temps réel** via API **ESRI REST & Open Data**.  
+✅ **Interface intuitive et adaptative** sur mobile.  
+
+---
+
+## 🛠️ Technologies utilisées
+GeoShield repose sur une stack **moderne et performante** :
+
+| Technologie      | Usage |
+|-----------------|------------------------------------------------|
+| **Flutter**     | Développement de l'application mobile |
+| **Dart**        | Langage principal |
+| **flutter_map** | Affichage des cartes interactives |
+| **OpenStreetMap** | Base cartographique |
+| **GeoJSON & ESRI REST API** | Intégration des données de risques |
+| **Firebase** (optionnel) | Stockage et gestion des utilisateurs |
+
+---
+
+## 📥 Installation
+### 🔹 Prérequis
+- **Flutter** doit être installé :  
+  [📖 Documentation officielle](https://docs.flutter.dev/get-started/install)  
+
+### 🔹 Étapes d’installation
+```sh
+# Clone du projet
+git clone https://github.com/PolyHx-2025/GeoShield.git
+
+# Accéder au dossier
+cd GeoShield
+
+# Installer les dépendances
+flutter pub get
+
+# Lancer l'application
+flutter run
