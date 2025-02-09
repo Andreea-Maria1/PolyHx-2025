@@ -38,6 +38,7 @@ dependencies:
     flutter_map_geojson: ^1.0.7
     latlong2: 0.9.1
     proj4dart: ^2.1.0
+    google_fonts: ^6.2.1
 
 dev_dependencies:
     flutter_test:
