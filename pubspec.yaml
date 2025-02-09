@@ -37,6 +37,7 @@ dependencies:
     flutter_map: ^7.0.2
     flutter_map_geojson: ^1.0.7
     latlong2: 0.9.1
+    proj4dart: ^2.1.0
 
 dev_dependencies:
     flutter_test:

@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:proj4dart/proj4dart.dart' as proj;
 
 class MapScreen extends StatefulWidget {
   final Set<String> selectedLayers;
@@ -27,7 +28,10 @@ class _MapScreenState extends State<MapScreen> {
   bool isLandslideLayerVisible = false;
   bool isReserveLayerVisible = false;
 
-  void _toggleFlood() {}
+  final projWGS84 =
+      proj.Projection.add('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+  final projMercator = proj.Projection.add('EPSG:3857',
+      '+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs');
 
   Map<String, (IconData, String, Color, void Function())> get layerOptions {
     return {
@@ -60,17 +64,21 @@ class _MapScreenState extends State<MapScreen> {
 
   bool _showLayerMenu = false;
   List<Polygon> floodPolygons = []; // Stockage des polygones inondables
+  List<Polygon> landslidePolygons = [];
+  List<Polygon> reservePolygons = [];
 
   @override
   void initState() {
     super.initState();
     _loadFloodLayer();
+    _loadReserveLayer();
+    _loadLandslideLayer();
   }
 
   Future<void> _loadFloodLayer() async {
     try {
       // Charger le fichier JSON
-      final String data = await rootBundle.loadString('assets/flood2.json');
+      final String data = await rootBundle.loadString('assets/flood.json');
       final Map<String, dynamic> jsonData = json.decode(data);
 
       // Extraire les polygones des inondations
@@ -105,6 +113,97 @@ class _MapScreenState extends State<MapScreen> {
       print("✅ Données d'inondation chargées avec succès !");
     } catch (e) {
       print("❌ Erreur lors du chargement des données d'inondation : $e");
+    }
+  }
+
+  Future<void> _loadLandslideLayer() async {
+    try {
+      // Charger le fichier JSON
+      final String data = await rootBundle.loadString('assets/glissement.json');
+      final Map<String, dynamic> jsonData = json.decode(data);
+
+      // Extraire les polygones des inondations
+      final List<dynamic> features = jsonData['features'] ?? [];
+      List<Polygon> tempPolygons = features
+          .map((feature) {
+            if (feature['geometry']['type'] == 'Polygon') {
+              final List<dynamic> coordinates =
+                  feature['geometry']['coordinates'][0];
+
+              List<LatLng> points = coordinates.map<LatLng>((coord) {
+                double x = coord[0].toDouble(); // X (Mercator)
+                double y = coord[1].toDouble(); // Y (Mercator)
+
+                // Convert from Web Mercator to Lat/Lng
+                var result =
+                    projMercator.transform(projWGS84, proj.Point(x: x, y: y));
+                double lon = result.x;
+                double lat = result.y;
+
+                return LatLng(lat, lon);
+              }).toList();
+              return Polygon(
+                points: points,
+                color:
+                    Colors.orange.withOpacity(0.3), // Couleur semi-transparente
+                borderColor: Colors.orange,
+                borderStrokeWidth: 2,
+              );
+            }
+            return null;
+          })
+          .whereType<Polygon>()
+          .toList();
+
+      setState(() {
+        landslidePolygons = tempPolygons;
+      });
+
+      print("✅ Données de glissement chargées avec succès !");
+    } catch (e) {
+      print("❌ Erreur lors du chargement des données de glissement : $e");
+    }
+  }
+
+  Future<void> _loadReserveLayer() async {
+    try {
+      // Charger le fichier JSON
+      final String data =
+          await rootBundle.loadString('assets/ecoterritoires.json');
+      final Map<String, dynamic> jsonData = json.decode(data);
+
+      // Extraire les polygones des inondations
+      final List<dynamic> features = jsonData['features'] ?? [];
+      List<Polygon> tempPolygons = features
+          .map((feature) {
+            if (feature['geometry']['type'] == 'Polygon') {
+              final List<dynamic> coordinates =
+                  feature['geometry']['coordinates'][0];
+
+              List<LatLng> points = coordinates.map<LatLng>((coord) {
+                return LatLng(coord[1], coord[0]); // Latitude, Longitude
+              }).toList();
+
+              return Polygon(
+                points: points,
+                color:
+                    Colors.blue.withOpacity(0.3), // Couleur semi-transparente
+                borderColor: Colors.green,
+                borderStrokeWidth: 2,
+              );
+            }
+            return null;
+          })
+          .whereType<Polygon>()
+          .toList();
+
+      setState(() {
+        reservePolygons = tempPolygons;
+      });
+
+      print("✅ Données de réserve chargées avec succès !");
+    } catch (e) {
+      print("❌ Erreur lors du chargement des données de réserve : $e");
     }
   }
 
@@ -211,6 +310,14 @@ class _MapScreenState extends State<MapScreen> {
             if (isFloodLayerVisible)
               PolygonLayer(
                 polygons: floodPolygons,
+              ),
+            if (isLandslideLayerVisible)
+              PolygonLayer(
+                polygons: landslidePolygons,
+              ),
+            if (isReserveLayerVisible)
+              PolygonLayer(
+                polygons: reservePolygons,
               ),
           ],
         ),
