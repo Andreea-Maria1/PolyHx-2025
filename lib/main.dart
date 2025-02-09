@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geoshield/pages/map_page.dart';
+import 'package:geoshield/pages/home-page.dart';
 import 'package:geoshield/pages/dev_team_page.dart';
 import 'package:geoshield/components/navbar.dart';
 
@@ -18,7 +18,7 @@ class _MyAppState extends State<MyApp> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const MapPage(),
+    const HomePage(title: "GeoShield"),
     const DevTeamPage(),
   ];
 
