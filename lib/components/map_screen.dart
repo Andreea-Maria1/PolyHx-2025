@@ -2,8 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 class MapScreen extends StatefulWidget {
   final Set<String> selectedLayers;
@@ -28,50 +29,55 @@ class _MapScreenState extends State<MapScreen> {
     'reserve': (Icons.forest, 'Réserves', Colors.green),
   };
   bool _showLayerMenu = false;
+  List<Polygon> floodPolygons = []; // Stockage des polygones inondables
+  bool isFloodLayerVisible = false;
 
-  final Map<String, WMSTileLayerOptions> _wmsConfigs = {
-    'inondation': WMSTileLayerOptions(
-      baseUrl: 'https://geo.weather.gc.ca/geomet/',
-      layers: const ['FLOOD_ZONES'],
-      version: '1.3.0',
-      format: 'image/png',
-      transparent: true,
-      crs: const Epsg3857(),
-      styles: const [''],
-      otherParameters: const {
-        'FORMAT': 'image/png',
-        'TRANSPARENT': 'true',
-      },
-    ),
-    'glissement': WMSTileLayerOptions(
-      baseUrl:
-          'https://maps-cartes.services.geo.ca/server_serveur/rest/services/NRCan/Landslides_Glissements_terrain/MapServer/WMSServer',
-      layers: const ['0'],
-      version: '1.3.0',
-      format: 'image/png',
-      transparent: true,
-      crs: Epsg3857(),
-      styles: const [''],
-      otherParameters: const {
-        'FORMAT': 'image/png',
-        'TRANSPARENT': 'true',
-      },
-    ),
-    'reserve': WMSTileLayerOptions(
-      baseUrl:
-          'https://services.arcgis.com/zDGrq8tnAgY4j1J7/arcgis/services/Protected_Areas/MapServer/WMSServer',
-      layers: const ['0'],
-      version: '1.3.0',
-      format: 'image/png',
-      transparent: true,
-      crs: Epsg3857(),
-      styles: const [''],
-      otherParameters: const {
-        'FORMAT': 'image/png',
-        'TRANSPARENT': 'true',
-      },
-    ),
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadFloodLayer();
+  }
+
+  Future<void> _loadFloodLayer() async {
+    try {
+      // Charger le fichier JSON
+      final String data = await rootBundle.loadString('assets/flood2.json');
+      final Map<String, dynamic> jsonData = json.decode(data);
+
+      // Extraire les polygones des inondations
+      final List<dynamic> features = jsonData['features'] ?? [];
+      List<Polygon> tempPolygons = features
+          .map((feature) {
+            if (feature['geometry']['type'] == 'Polygon') {
+              final List<dynamic> coordinates =
+                  feature['geometry']['coordinates'][0];
+
+              List<LatLng> points = coordinates.map<LatLng>((coord) {
+                return LatLng(coord[1], coord[0]); // Latitude, Longitude
+              }).toList();
+
+              return Polygon(
+                points: points,
+                color:
+                    Colors.blue.withOpacity(0.3), // Couleur semi-transparente
+                borderColor: Colors.blue,
+                borderStrokeWidth: 2,
+              );
+            }
+            return null;
+          })
+          .whereType<Polygon>()
+          .toList();
+
+      setState(() {
+        floodPolygons = tempPolygons;
+      });
+
+      print("✅ Données d'inondation chargées avec succès !");
+    } catch (e) {
+      print("❌ Erreur lors du chargement des données d'inondation : $e");
+    }
+  }
 
   Future<void> _performSearch() async {
     final query = _searchController.text.trim();
@@ -172,18 +178,11 @@ class _MapScreenState extends State<MapScreen> {
             TileLayer(
               urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             ),
-            ...widget.selectedLayers.map((key) {
-              final config = _wmsConfigs[key]!;
-              return TileLayer(
-                wmsOptions: config,
-                tileProvider: NonEvictingNetworkTileProvider(),
-                additionalOptions: const {
-                  'opacity': '0.7',
-                },
-              );
-            }).toList(),
-            ..._buildActiveLayers(),
             _buildZoomControls(),
+            if (isFloodLayerVisible)
+              PolygonLayer(
+                polygons: floodPolygons,
+              ),
           ],
         ),
         // Barre de recherche
@@ -218,18 +217,19 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
-        // Menu des couches
+        // Menu des couches - Corrected section
         Positioned(
           top: 20,
           right: 20,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildLayerButton(),
+              _buildLayerButton(), // Add the layer button here
               if (_showLayerMenu) _buildLayerMenu(),
             ],
           ),
         ),
+        _buildZoomControls(),
       ],
     );
   }
@@ -313,19 +313,6 @@ class _MapScreenState extends State<MapScreen> {
         }).toList(),
       ),
     );
-  }
-
-  List<TileLayer> _buildActiveLayers() {
-    return widget.selectedLayers.map((key) {
-      final config = _wmsConfigs[key]!;
-      return TileLayer(
-        wmsOptions: config,
-        tileProvider: NonEvictingNetworkTileProvider(),
-        additionalOptions: const {
-          'opacity': '0.7',
-        },
-      );
-    }).toList();
   }
 
   Widget _buildZoomControls() {
