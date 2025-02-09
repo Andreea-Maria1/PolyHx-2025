@@ -83,32 +83,53 @@ class _MapScreenState extends State<MapScreen> {
 
       // Extraire les polygones des inondations
       final List<dynamic> features = jsonData['features'] ?? [];
-      List<Polygon> tempPolygons = features
-          .map((feature) {
-            if (feature['geometry']['type'] == 'Polygon') {
-              final List<dynamic> coordinates = feature['geometry']['coordinates'][0];
+      List<Polygon> tempPolygons = [];
 
-              List<LatLng> points = coordinates.map<LatLng>((coord) {
-                return LatLng(coord[1], coord[0]); // Latitude, Longitude
-              }).toList();
+      for (var feature in features) {
+        if (feature['geometry']['type'] == 'MultiPolygon') {
+          final List<dynamic> multiCoordinates =
+              feature['geometry']['coordinates'];
 
-              return Polygon(
+          for (var polygonCoordinates in multiCoordinates) {
+            List<LatLng> points = polygonCoordinates[0].map<LatLng>((coord) {
+              return LatLng(coord[1], coord[0]); // Latitude, Longitude
+            }).toList();
+
+            tempPolygons.add(
+              Polygon(
                 points: points,
-                color: Colors.blue.withOpacity(0.3), // Couleur semi-transparente
+                color:
+                    Colors.blue.withOpacity(0.5), // Couleur semi-transparente
                 borderColor: Colors.blue,
                 borderStrokeWidth: 2,
-              );
-            }
-            return null;
-          })
-          .whereType<Polygon>()
-          .toList();
+              ),
+            );
+          }
+        } else if (feature['geometry']['type'] == 'Polygon') {
+          final List<dynamic> coordinates =
+              feature['geometry']['coordinates'][0];
+
+          List<LatLng> points = coordinates.map<LatLng>((coord) {
+            return LatLng(coord[1], coord[0]); // Latitude, Longitude
+          }).toList();
+
+          tempPolygons.add(
+            Polygon(
+              points: points,
+              color: Colors.blue.withOpacity(0.5),
+              borderColor: Colors.blue,
+              borderStrokeWidth: 2,
+            ),
+          );
+        }
+      }
 
       setState(() {
         floodPolygons = tempPolygons;
       });
 
-      print("✅ Données d'inondation chargées avec succès !");
+      print(
+          "✅ Données d'inondation chargées avec succès ! Polygons: ${floodPolygons.length}");
     } catch (e) {
       print("❌ Erreur lors du chargement des données d'inondation : $e");
     }
@@ -143,7 +164,7 @@ class _MapScreenState extends State<MapScreen> {
               return Polygon(
                 points: points,
                 color:
-                    Colors.orange.withOpacity(0.3), // Couleur semi-transparente
+                    Colors.orange.withOpacity(0.5), // Couleur semi-transparente
                 borderColor: Colors.orange,
                 borderStrokeWidth: 2,
               );
@@ -185,7 +206,7 @@ class _MapScreenState extends State<MapScreen> {
               return Polygon(
                 points: points,
                 color:
-                    Colors.blue.withOpacity(0.3), // Couleur semi-transparente
+                    Colors.green.withOpacity(0.5), // Couleur semi-transparente
                 borderColor: Colors.green,
                 borderStrokeWidth: 2,
               );
@@ -211,7 +232,8 @@ class _MapScreenState extends State<MapScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://nominatim.openstreetmap.org/search?q=$query&format=json&polygon=1&addressdetails=1'),
+        Uri.parse(
+            'https://nominatim.openstreetmap.org/search?q=$query&format=json&polygon=1&addressdetails=1'),
         headers: {'Accept': 'application/json'},
       );
 
@@ -278,7 +300,9 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     // If no bounding box or calculation failed, use type-based zoom levels
-    return typeZoomLevels[type] ?? typeZoomLevels[result['class']] ?? 11.0; // Default zoom level if type is unknown
+    return typeZoomLevels[type] ??
+        typeZoomLevels[result['class']] ??
+        11.0; // Default zoom level if type is unknown
   }
 
   @override
@@ -338,7 +362,8 @@ class _MapScreenState extends State<MapScreen> {
               decoration: InputDecoration(
                 hintText: 'Rechercher un lieu...',
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: _performSearch,
@@ -435,7 +460,8 @@ class _MapScreenState extends State<MapScreen> {
                       entry.value.$2,
                       style: TextStyle(
                         color: isActive ? Colors.black : Colors.grey,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   ),
