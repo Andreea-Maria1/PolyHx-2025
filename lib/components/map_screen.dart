@@ -24,6 +24,8 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   bool isFloodLayerVisible = false;
+  bool isLandslideLayerVisible = false;
+  bool isReserveLayerVisible = false;
 
   void _toggleFlood() {}
 
@@ -37,8 +39,22 @@ class _MapScreenState extends State<MapScreen> {
           isFloodLayerVisible = !isFloodLayerVisible;
         }
       ),
-      'glissement': (Icons.landslide, 'Glissements', Colors.orange, () => {}),
-      'reserve': (Icons.forest, 'Réserves', Colors.green, () => {}),
+      'glissement': (
+        Icons.landslide,
+        'Glissements',
+        Colors.orange,
+        () {
+          isLandslideLayerVisible = !isLandslideLayerVisible;
+        }
+      ),
+      'reserve': (
+        Icons.forest,
+        'Réserves',
+        Colors.green,
+        () {
+          isReserveLayerVisible = !isReserveLayerVisible;
+        }
+      ),
     };
   }
 
