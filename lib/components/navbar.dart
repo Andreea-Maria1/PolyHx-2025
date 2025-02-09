@@ -16,9 +16,10 @@ class Navbar extends StatelessWidget {
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.waves), label: 'Inondation'),
-        NavigationDestination(icon: Icon(Icons.landslide), label: 'Glissement'),
-        NavigationDestination(icon: Icon(Icons.forest), label: 'Réserves'),
+        NavigationDestination(
+            icon: Icon(Icons.map_rounded), label: 'Cartes'),
+        NavigationDestination(
+            icon: Icon(Icons.group_rounded), label: 'Équipe Dev'),
       ],
     );
   }
