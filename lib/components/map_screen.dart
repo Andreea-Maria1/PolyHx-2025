@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 
 class MapScreen extends StatefulWidget {
   final Set<String> selectedLayers;
@@ -18,12 +20,53 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  final _layerOptions = {
-    'inondation': (Icons.waves, 'Inondations', Colors.blue),
-    'glissement': (Icons.landslide, 'Glissements', Colors.orange),
-    'reserve': (Icons.forest, 'Réserves', Colors.green),
-  };
-  bool _showLayerMenu = false;
+  List<Polygon> floodPolygons = []; // Stockage des polygones inondables
+  bool isFloodLayerVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFloodLayer();
+  }
+
+  Future<void> _loadFloodLayer() async {
+    try {
+      // Charger le fichier JSON
+      final String data = await rootBundle.loadString('assets/flood2.json');
+      final Map<String, dynamic> jsonData = json.decode(data);
+
+      // Extraire les polygones des inondations
+      final List<dynamic> features = jsonData['features'] ?? [];
+      List<Polygon> tempPolygons = features
+          .map((feature) {
+            if (feature['geometry']['type'] == 'Polygon') {
+              final List<dynamic> coordinates = feature['geometry']['coordinates'][0];
+
+              List<LatLng> points = coordinates.map<LatLng>((coord) {
+                return LatLng(coord[1], coord[0]); // Latitude, Longitude
+              }).toList();
+
+              return Polygon(
+                points: points,
+                color: Colors.blue.withOpacity(0.3), // Couleur semi-transparente
+                borderColor: Colors.blue,
+                borderStrokeWidth: 2,
+              );
+            }
+            return null;
+          })
+          .whereType<Polygon>()
+          .toList();
+
+      setState(() {
+        floodPolygons = tempPolygons;
+      });
+
+      print("✅ Données d'inondation chargées avec succès !");
+    } catch (e) {
+      print("❌ Erreur lors du chargement des données d'inondation : $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,16 +74,18 @@ class _MapScreenState extends State<MapScreen> {
       children: [
         FlutterMap(
           mapController: _mapController,
-          options: MapOptions(
-            initialCenter: const LatLng(45.5017, -73.5673),
-            initialZoom: 10,
+          options: const MapOptions(
+            initialCenter: LatLng(47.5, -70.0), // Centrage au Québec
+            initialZoom: 7,
           ),
           children: [
             TileLayer(
               urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             ),
-            ..._buildActiveLayers(),
-            _buildZoomControls(),
+            if (isFloodLayerVisible)
+              PolygonLayer(
+                polygons: floodPolygons,
+              ),
           ],
         ),
         Positioned(
@@ -50,10 +95,10 @@ class _MapScreenState extends State<MapScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _buildLayerButton(),
-              if (_showLayerMenu) _buildLayerMenu(),
             ],
           ),
         ),
+        _buildZoomControls(),
       ],
     );
   }
@@ -73,80 +118,16 @@ class _MapScreenState extends State<MapScreen> {
       child: IconButton(
         icon: Icon(
           Icons.layers,
-          color: widget.selectedLayers.isNotEmpty ? Colors.orange : Colors.grey,
+          color: isFloodLayerVisible ? Colors.orange : Colors.grey,
         ),
-        onPressed: () => setState(() => _showLayerMenu = !_showLayerMenu),
+        onPressed: () {
+          setState(() {
+            isFloodLayerVisible = !isFloodLayerVisible;
+          });
+        },
         padding: const EdgeInsets.all(12),
       ),
     );
-  }
-
-  Widget _buildLayerMenu() {
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      constraints: const BoxConstraints(maxWidth: 160),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: _layerOptions.entries.map((entry) {
-          final isActive = widget.selectedLayers.contains(entry.key);
-          return InkWell(
-            onTap: () => widget.onLayerToggled(entry.key),
-            child: Container(
-              width: 160,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: isActive ? entry.value.$3.withOpacity(0.1) : null,
-                borderRadius: BorderRadius.circular(4),
-                border: isActive
-                    ? Border.all(color: entry.value.$3, width: 1)
-                    : Border(
-                        bottom: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-              ),
-              child: Row(
-                children: [
-                  Icon(entry.value.$1, color: entry.value.$3),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      entry.value.$2,
-                      style: TextStyle(
-                        color: isActive ? Colors.black : Colors.grey,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  List<TileLayer> _buildActiveLayers() {
-    return _layerOptions.entries
-        .where((entry) => widget.selectedLayers.contains(entry.key))
-        .map((entry) => TileLayer(
-              urlTemplate: 'https://server.com/${entry.key}/{z}/{x}/{y}.png',
-              tileProvider: NonEvictingNetworkTileProvider(),
-            ))
-        .toList();
   }
 
   Widget _buildZoomControls() {
@@ -179,18 +160,6 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class NonEvictingNetworkTileProvider extends NetworkTileProvider {
-  NonEvictingNetworkTileProvider({super.headers});
-
-  @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
-    return NetworkImage(
-      'https://server.com/${coordinates.z}/${coordinates.x}/${coordinates.y}.png',
-      headers: headers,
     );
   }
 }
