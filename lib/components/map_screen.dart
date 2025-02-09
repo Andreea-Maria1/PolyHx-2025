@@ -1,14 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-<<<<<<< HEAD
-import 'package:flutter_map_geojson/flutter_map_geojson.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter/services.dart';
-
-class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
-=======
-import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MapScreen extends StatefulWidget {
   final Set<String> selectedLayers;
@@ -19,7 +14,6 @@ class MapScreen extends StatefulWidget {
     required this.selectedLayers,
     required this.onLayerToggled,
   });
->>>>>>> d12723411f34551827c4ded244f9afd4dd7fb60f
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -27,35 +21,142 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-<<<<<<< HEAD
-  final GeoJsonParser myGeoJson = GeoJsonParser(); // ✅ Ajout du parser GeoJSON
-  bool isFloodLayerVisible = false; // État pour afficher/masquer la couche
-
-  @override
-  void initState() {
-    super.initState();
-    loadGeoJson();
-  }
-
-  Future<void> loadGeoJson() async {
-    try {
-      final String data = await rootBundle.loadString('assets/flood.geojson');
-      print("✅ Fichier GeoJSON chargé avec succès !");
-      myGeoJson.parseGeoJsonAsString(data);
-      print("✅ Données GeoJSON parsées !");
-      setState(() {});
-    } catch (e) {
-      print("❌ Erreur lors du chargement du GeoJSON : $e");
-    }
-  }
-=======
+  final TextEditingController _searchController = TextEditingController();
   final _layerOptions = {
     'inondation': (Icons.waves, 'Inondations', Colors.blue),
     'glissement': (Icons.landslide, 'Glissements', Colors.orange),
     'reserve': (Icons.forest, 'Réserves', Colors.green),
   };
   bool _showLayerMenu = false;
->>>>>>> d12723411f34551827c4ded244f9afd4dd7fb60f
+
+  final Map<String, WMSTileLayerOptions> _wmsConfigs = {
+    'inondation': WMSTileLayerOptions(
+      baseUrl: 'https://geo.weather.gc.ca/geomet/',
+      layers: const ['FLOOD_ZONES'],
+      version: '1.3.0',
+      format: 'image/png',
+      transparent: true,
+      crs: const Epsg3857(),
+      styles: const [''],
+      otherParameters: const {
+        'FORMAT': 'image/png',
+        'TRANSPARENT': 'true',
+      },
+    ),
+    'glissement': WMSTileLayerOptions(
+      baseUrl:
+          'https://maps-cartes.services.geo.ca/server_serveur/rest/services/NRCan/Landslides_Glissements_terrain/MapServer/WMSServer',
+      layers: const ['0'],
+      version: '1.3.0',
+      format: 'image/png',
+      transparent: true,
+      crs: Epsg3857(),
+      styles: const [''],
+      otherParameters: const {
+        'FORMAT': 'image/png',
+        'TRANSPARENT': 'true',
+      },
+    ),
+    'reserve': WMSTileLayerOptions(
+      baseUrl:
+          'https://services.arcgis.com/zDGrq8tnAgY4j1J7/arcgis/services/Protected_Areas/MapServer/WMSServer',
+      layers: const ['0'],
+      version: '1.3.0',
+      format: 'image/png',
+      transparent: true,
+      crs: Epsg3857(),
+      styles: const [''],
+      otherParameters: const {
+        'FORMAT': 'image/png',
+        'TRANSPARENT': 'true',
+      },
+    ),
+  };
+
+  Future<void> _performSearch() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://nominatim.openstreetmap.org/search?q=$query&format=json&polygon=1&addressdetails=1'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> results = json.decode(response.body);
+        if (results.isNotEmpty) {
+          final result = results[0];
+          final lat = double.parse(result['lat']);
+          final lon = double.parse(result['lon']);
+
+          // Calculate zoom level based on the type and importance of the result
+          double zoom = _calculateZoomLevel(result);
+
+          // Animate to the new position with the calculated zoom
+          _mapController.move(LatLng(lat, lon), zoom);
+        }
+      }
+    } catch (e) {
+      debugPrint('Search error: $e');
+    }
+  }
+
+  double _calculateZoomLevel(Map<String, dynamic> result) {
+    // Get the type of location and bounding box if available
+    final type = result['type'];
+    final bbox = result['boundingbox'];
+
+    const double maxAllowedZoom = 18.0;
+
+    // Default zoom levels for different location types
+    const Map<String, double> typeZoomLevels = {
+      'house': 14.0, // Vue autour de la maison
+      'building': 14.0, // Vue autour du bâtiment
+      'street': 14.0, // Vue des rues environnantes
+      'suburb': 13.0, // Vue du quartier
+      'village': 12.0, // Vue du village
+      'town': 11.0, // Vue de la ville
+      'city': 10.0, // Vue plus large de la ville
+      'county': 9.0, // Vue du comté
+      'state': 7.0, // Vue de la province/état
+      'country': 5.0, // Vue du pays
+    };
+
+    // If we have a bounding box, calculate zoom based on area size
+    if (bbox != null) {
+      try {
+        final south = double.parse(bbox[0]);
+        final north = double.parse(bbox[1]);
+        final west = double.parse(bbox[2]);
+        final east = double.parse(bbox[3]);
+
+        // Calculate the area size
+        final latDiff = (north - south).abs();
+        final lonDiff = (east - west).abs();
+        final maxDiff = max(latDiff, lonDiff);
+
+        // Formule approximative pour convertir la taille en niveau de zoom
+        double computedZoom = 12 - log(maxDiff) / log(2);
+        // On borne le zoom pour éviter un agrandissement excessif
+        return computedZoom.clamp(5.0, maxAllowedZoom);
+      } catch (e) {
+        debugPrint('Error calculating zoom from bbox: $e');
+      }
+    }
+
+    // If no bounding box or calculation failed, use type-based zoom levels
+    return typeZoomLevels[type] ??
+        typeZoomLevels[result['class']] ??
+        11.0; // Default zoom level if type is unknown
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,71 +164,61 @@ class _MapScreenState extends State<MapScreen> {
       children: [
         FlutterMap(
           mapController: _mapController,
-          options: MapOptions(
-            initialCenter: const LatLng(45.5017, -73.5673),
+          options: const MapOptions(
+            initialCenter: LatLng(45.5017, -73.5673),
             initialZoom: 10,
           ),
           children: [
             TileLayer(
               urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             ),
-<<<<<<< HEAD
-            if (isFloodLayerVisible) ...[
-              PolygonLayer(polygons: myGeoJson.polygons), // ✅ Affichage des polygones du GeoJSON
-              PolylineLayer(polylines: myGeoJson.polylines), // Si des lignes sont présentes
-              MarkerLayer(markers: myGeoJson.markers), // Si des points sont présents
-            ],
-          ],
-        ),
-        // Boutons de zoom
-        Align(
-          alignment: Alignment.bottomRight,
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'zoomIn',
-                  onPressed: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom + 1,
-                  ),
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton(
-                  mini: true,
-                  heroTag: 'zoomOut',
-                  onPressed: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom - 1,
-                  ),
-                  child: const Icon(Icons.remove),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Bouton pour activer/désactiver la couche GeoJSON
-        Positioned(
-          top: 10,
-          right: 10,
-          child: FloatingActionButton(
-            onPressed: () {
-              setState(() {
-                isFloodLayerVisible = !isFloodLayerVisible; // ✅ Active/Désactive la couche
-              });
-            },
-            child: Icon(
-              isFloodLayerVisible ? Icons.layers : Icons.layers_clear,
-            ),
-=======
+            ...widget.selectedLayers.map((key) {
+              final config = _wmsConfigs[key]!;
+              return TileLayer(
+                wmsOptions: config,
+                tileProvider: NonEvictingNetworkTileProvider(),
+                additionalOptions: const {
+                  'opacity': '0.7',
+                },
+              );
+            }).toList(),
             ..._buildActiveLayers(),
             _buildZoomControls(),
           ],
         ),
+        // Barre de recherche
+        Positioned(
+          top: 20,
+          left: 20,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.7,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Rechercher un lieu...',
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _performSearch,
+                ),
+              ),
+              onSubmitted: (_) => _performSearch(),
+            ),
+          ),
+        ),
+        // Menu des couches
         Positioned(
           top: 20,
           right: 20,
@@ -137,14 +228,11 @@ class _MapScreenState extends State<MapScreen> {
               _buildLayerButton(),
               if (_showLayerMenu) _buildLayerMenu(),
             ],
->>>>>>> d12723411f34551827c4ded244f9afd4dd7fb60f
           ),
         ),
       ],
     );
   }
-<<<<<<< HEAD
-=======
 
   Widget _buildLayerButton() {
     return Container(
@@ -228,13 +316,16 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   List<TileLayer> _buildActiveLayers() {
-    return _layerOptions.entries
-        .where((entry) => widget.selectedLayers.contains(entry.key))
-        .map((entry) => TileLayer(
-              urlTemplate: 'https://server.com/${entry.key}/{z}/{x}/{y}.png',
-              tileProvider: NonEvictingNetworkTileProvider(),
-            ))
-        .toList();
+    return widget.selectedLayers.map((key) {
+      final config = _wmsConfigs[key]!;
+      return TileLayer(
+        wmsOptions: config,
+        tileProvider: NonEvictingNetworkTileProvider(),
+        additionalOptions: const {
+          'opacity': '0.7',
+        },
+      );
+    }).toList();
   }
 
   Widget _buildZoomControls() {
@@ -276,10 +367,62 @@ class NonEvictingNetworkTileProvider extends NetworkTileProvider {
 
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
-    return NetworkImage(
-      'https://server.com/${coordinates.z}/${coordinates.x}/${coordinates.y}.png',
-      headers: headers,
-    );
+    if (options.wmsOptions != null) {
+      final wms = options.wmsOptions!;
+      final bbox = _getBbox(coordinates, options);
+
+      final params = {
+        'service': 'WMS',
+        'request': 'GetMap',
+        'version': wms.version,
+        'layers': wms.layers.join(','),
+        'styles': options.additionalOptions['styles'] ?? '',
+        'format': wms.format,
+        'transparent': wms.transparent.toString(),
+        'width': '256',
+        'height': '256',
+        'crs': 'EPSG:3857',
+        'bbox': bbox,
+      };
+
+      final url = Uri.parse(wms.baseUrl).replace(queryParameters: params);
+      return NetworkImage(url.toString(), headers: headers);
+    }
+
+    return super.getImage(coordinates, options);
   }
->>>>>>> d12723411f34551827c4ded244f9afd4dd7fb60f
+
+  String _getBbox(TileCoordinates coords, TileLayer options) {
+    final crs = options.wmsOptions?.crs ?? const Epsg3857();
+    final tileSize = options.tileSize ?? 256.0;
+    final nwPoint = Point(coords.x * tileSize, coords.y * tileSize);
+    final sePoint = nwPoint + Point(tileSize.toDouble(), tileSize.toDouble());
+
+    final nw = _getCoordinate(nwPoint, coords.z, crs);
+    final se = _getCoordinate(sePoint, coords.z, crs);
+
+    return '${nw.longitude},${se.latitude},${se.longitude},${nw.latitude}';
+  }
+
+  LatLng _getCoordinate(Point point, int zoom, Crs crs) {
+    final scale = 1 << zoom;
+    final x = point.x / scale;
+    final y = point.y / scale;
+
+    if (crs.code == 'EPSG:3857') {
+      return LatLng(
+        _yToLat(y),
+        _xToLon(x),
+      );
+    }
+
+    return const LatLng(0, 0);
+  }
+
+  double _xToLon(double x) => (x * 360 - 180).toDouble();
+
+  double _yToLat(double y) {
+    final n = pi - 2 * pi * y;
+    return (180 / pi * atan(0.5 * (exp(n) - exp(-n)))).toDouble();
+  }
 }
