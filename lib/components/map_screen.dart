@@ -23,14 +23,27 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
-  final _layerOptions = {
-    'inondation': (Icons.waves, 'Inondations', Colors.blue),
-    'glissement': (Icons.landslide, 'Glissements', Colors.orange),
-    'reserve': (Icons.forest, 'Réserves', Colors.green),
-  };
+  bool isFloodLayerVisible = false;
+
+  void _toggleFlood() {}
+
+  Map<String, (IconData, String, Color, void Function())> get layerOptions {
+    return {
+      'inondation': (
+        Icons.waves,
+        'Inondations',
+        Colors.blue,
+        () {
+          isFloodLayerVisible = !isFloodLayerVisible;
+        }
+      ),
+      'glissement': (Icons.landslide, 'Glissements', Colors.orange, () => {}),
+      'reserve': (Icons.forest, 'Réserves', Colors.green, () => {}),
+    };
+  }
+
   bool _showLayerMenu = false;
   List<Polygon> floodPolygons = []; // Stockage des polygones inondables
-  bool isFloodLayerVisible = false;
 
   @override
   void initState() {
@@ -273,10 +286,13 @@ class _MapScreenState extends State<MapScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: _layerOptions.entries.map((entry) {
+        children: layerOptions.entries.map((entry) {
           final isActive = widget.selectedLayers.contains(entry.key);
           return InkWell(
-            onTap: () => widget.onLayerToggled(entry.key),
+            onTap: () {
+              widget.onLayerToggled(entry.key);
+              entry.value.$4();
+            },
             child: Container(
               width: 160,
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
