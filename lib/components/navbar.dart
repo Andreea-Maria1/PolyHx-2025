@@ -17,9 +17,9 @@ class Navbar extends StatelessWidget {
       onDestinationSelected: onDestinationSelected,
       destinations: const [
         NavigationDestination(
-            icon: Icon(Icons.add_location_alt_rounded), label: 'Cartes'),
+            icon: Icon(Icons.map_rounded), label: 'Cartes'),
         NavigationDestination(
-            icon: Icon(Icons.attribution_rounded), label: 'Équipe Dev'),
+            icon: Icon(Icons.group_rounded), label: 'Équipe Dev'),
       ],
     );
   }
